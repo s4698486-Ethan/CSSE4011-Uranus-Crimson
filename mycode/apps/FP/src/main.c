@@ -1,9 +1,9 @@
 /**
 ********************************************************************************
-* @file P1/src/s4702018_main.c
+* @file FP/src/s4702018_main.c
 * @author Henry Sommerville - s4702018
-* @date 22.02.2024
-* @brief main file for prac 2
+* @date 28.04.2024
+* @brief main file for final project
 ********************************************************************************
 */
 
@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define PACKET_START 0xAA
 #define MODE_DEFAULT 0x00
 #define MODE_GESTURE 0x01
 
@@ -41,8 +42,8 @@ uint32_t get_distance(const struct gpio_dt_spec* trig, const struct gpio_dt_spec
     uint32_t ms_duration;
     volatile uint32_t val;
     uint32_t cm;
-    uint32_t stop_time;
-    uint32_t start_time;
+    volatile uint32_t stop_time;
+    volatile uint32_t start_time;
     uint8_t ret;
 
     /* Trigger ultrasonic sensor */
@@ -61,18 +62,16 @@ uint32_t get_distance(const struct gpio_dt_spec* trig, const struct gpio_dt_spec
 
         do {
 		} while (gpio_pin_get_dt(echo) == 0);
-		
         start_time = k_cycle_get_32();
-
+		
 		do {
-			val = gpio_pin_get_dt(echo);
-            stop_time = k_cycle_get_32();
-            if (cycles_spent > 1266720) {
-                return 0;
-            }
-        } while (val == 1);
+        } while (gpio_pin_get_dt(echo) == 1);
 
+        stop_time = k_cycle_get_32();
         cycles_spent = stop_time - start_time;
+        // if (cycles_spent > 1266720) {
+        //     return 0;
+        // }
         ms_duration = k_cyc_to_us_floor32(cycles_spent);
         cm = ms_duration * 0.034 / 2;
 
@@ -123,6 +122,14 @@ int main(void) {
             //Check if there is a gesture? not exactly sure how to do this
         } else {
             // Send distances via UART
+            packet[0] = PACKET_START;
+            packet[1] = MODE_DEFAULT;
+            packet[2] = 4;
+            packet[3] = (left_distance >> 8) & 0xFF;
+            packet[4] = (left_distance) & 0xFF;
+            packet[5] = (right_distance >> 8) & 0xFF;
+            packet[6] = (right_distance) & 0xFF;
+            s4702018_uart_transmit(packet, 7);
         }
 
 
