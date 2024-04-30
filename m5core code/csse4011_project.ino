@@ -2,9 +2,9 @@
 *******************************************************************************
 * Copyright (c) 2021 by M5Stack
 *                  Equipped with M5Core2 sample source code
-*                          配套  M5Core2 示例源代码
+*                                M5Core2
 * Visit for more information: https://docs.m5stack.com/en/core/core2
-* 获取更多资料请访问: https://docs.m5stack.com/zh_CN/core/core2
+* : https://docs.m5stack.com/zh_CN/core/core2
 *
 * Describe: MQTT.
 * Date: 2021/11/5
@@ -27,7 +27,7 @@ PubSubClient client(espClient);
 #define MODE_DESTURE 0x02
 
 // Configure the name and password of the connected wifi and your MQTT Serve
-// host.  配置所连接wifi的名称、密码以及你MQTT服务器域名
+// host.
 const char* ssid        = "infrastructure";
 const char* password    = "3wbq4fAm4uij";
 const char* mqtt_server = "csse4011-iot.zones.eait.uq.edu.au";
@@ -55,19 +55,29 @@ uint16_t y = 0;
 uint16_t left;
 uint16_t right;
 
+uint32_t wait;
+
 void setup() {
     M5.begin();
+    wait = 0;
     setupWifi();
     client.setServer(mqtt_server, 1883);  // Sets the server details.
     client.setCallback(callback);  // Sets the message callback function.
+    delay(10);
     M5.Lcd.fillScreen(BLACK);
     delay(10);
     setGrid();
-
+    M5.Lcd.setTextColor(WHITE);
+    M5.Lcd.setTextSize(1);
     Serial2.begin(115200, SERIAL_8N1, 13, 14);
 }
 
 void loop() { 
+    if (!client.connected()) {
+      reConnect();
+    }
+
+    client.loop();
     // Drawing Bounding Box
     // Top line
 
@@ -87,14 +97,10 @@ void loop() {
     }
 
     M5.Lcd.setCursor(220, 10);
-    M5.Lcd.setTextColor(WHITE);
-    M5.Lcd.setTextSize(1);
     M5.Lcd.printf("Gesture:");
     delay(10);
 
     M5.Lcd.setCursor(220, 40);
-    M5.Lcd.setTextColor(WHITE);
-    M5.Lcd.setTextSize(1);
     M5.Lcd.printf("Coords: (%d, %d)", x, y);
     delay(10);
 
@@ -103,10 +109,6 @@ void loop() {
     } else {
       drawTurtleBot(CENTRE_X, CENTRE_Y);
     }
-    if (!client.connected()) {
-      reConnect();
-    }
-    client.loop();
 }
 
 void setGrid() {
@@ -149,6 +151,7 @@ void setGrid() {
 void drawTurtleBot(uint32_t x, uint32_t y) {
   // Draw TurtleBot centred at x and y
   M5.Lcd.fillRect(x - PADDING, y - PADDING, 2 * PADDING, 2 * PADDING, BLUE);
+  delay(10);
 }
 
 void setupWifi() {
@@ -183,8 +186,8 @@ void reConnect() {
         clientId += String(random(0xffff), HEX);
         // Attempt to connect. 
         if (client.connect(clientId.c_str())) {
-            client.subscribe("receive");
-            client.subscribe("send");
+            client.subscribe("45815018");
+            client.subscribe("un45815018");
             continue;
         } else {
             delay(5000);
