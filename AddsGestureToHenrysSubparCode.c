@@ -163,6 +163,11 @@ int main(void) {
                         if (right_distance >= 45 && right_distance <= 55) {
                             
                             // SET DISTANCES TO BE SENT VIA UART. Snake right to left.
+                            packet[0] = PACKET_START;
+                            packet[1] = MODE_GESTURE;
+                            packet[2] = 1;
+                            packet[3] = 0x01;
+                            s4702018_uart_transmit(packet, 4);
                             break;
                         }
                     }
@@ -198,6 +203,11 @@ int main(void) {
                         if (left_distance >= 45 && left_distance <= 55) {
                             
                             // SET DISTANCES TO BE SENT VIA UART. Snake left to right.
+                            packet[0] = PACKET_START;
+                            packet[1] = MODE_GESTURE;
+                            packet[2] = 1;
+                            packet[3] = 0x02;
+                            s4702018_uart_transmit(packet, 4);
                             break;
                         }
                     }
@@ -232,6 +242,11 @@ int main(void) {
                         if (right_distance >= 10 && right_distance <= 30) {
                             
                             // SET DISTANCES TO BE SENT VIA UART. Rotate left.
+                            packet[0] = PACKET_START;
+                            packet[1] = MODE_GESTURE;
+                            packet[2] = 1;
+                            packet[3] = 0x03;
+                            s4702018_uart_transmit(packet, 4);
                             break;
                         }
                     }
@@ -269,6 +284,11 @@ int main(void) {
                         if (left_distance >= 10 && left_distance <= 30) {
                             
                             // SET DISTANCES TO BE SENT VIA UART. Rotate left.
+                            packet[0] = PACKET_START;
+                            packet[1] = MODE_GESTURE;
+                            packet[2] = 1;
+                            packet[3] = 0x04;
+                            s4702018_uart_transmit(packet, 4);
                             break;
                         }
                     }
