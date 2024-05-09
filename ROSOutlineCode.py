@@ -22,7 +22,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-import maho.client
 
 gesture = 0
 left_distance = 0
@@ -46,7 +45,7 @@ class MoveTurtle(Node):
      
         move_cmd.linear.x = 0.2
 	    # let's turn at 0 radians/s
-        move_cmd.angular.z = 0
+        move_cmd.angular.z = 0.0
         # Create a timer that will gate the node actions twice a second
         timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.node_callback)
@@ -79,13 +78,12 @@ class MoveTurtle(Node):
 
         # Then will just return back to init.
 
+def main (args=None):
+    rclpy.init(args=args)
+    MoveTurtle()
+
  
 if __name__ == '__main__':
-    try:
-        MoveTurtle()
-    except:
-        print("GG")
-
-
+    main()
 # MQTT thread that receives, decodes data and then sets global flag for 
 # the ROS. Set gesture, left and right distance values based on that.
