@@ -5,5 +5,5 @@ def get_queue_data(queue):
     else:
         return None
     
-def normalize(min, max, value):
-    return (value - min) / (max - min)
+def normalize(new_min, new_max, old_min, old_max ,value):
+    return ((value - old_min) / (old_max - old_min)) * new_max

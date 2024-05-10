@@ -48,7 +48,7 @@ class MQTT():
 
                 self.mqtt_client.publish(json_data)
                 
-                time.sleep(0.1)
+                time.sleep(0.5)
 
     def on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code.is_failure:

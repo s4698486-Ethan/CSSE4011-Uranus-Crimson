@@ -22,6 +22,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+import time
 import threading
 import mqtt as mqtt
 import util as util
@@ -58,18 +59,21 @@ class MoveTurtle(Node):
         
     # 
     def node_callback(self):
-        data = util.get_queue_data(self.data_queue)
+        data = util.get_queue_data(self.receive_queue)
         if (data is not None):
             if data[0] == packet.MODE_DEFAULT:
-                print(f"linear x: {util.normalize(0, 0.26, data[1]) * 0.26}. angular z: {util.normalize(0, 0.26, data[2]) * 0.26}")
-                move_cmd.linear.x = util.normalize(0, 0.26, data[1]) * 0.26
-                move_cmd.angular.z = util.normalize(0, 0.26, data[2]) * 0.26
-                self.publisher.publish(move_cmd)
+                if (data[1] < 50 and data[2] < 50):
+                    print(f"linear x: {util.normalize(0, 0.26, 0, 50, data[1])}. angular z: {util.normalize(0, 0.26, 0, 100, data[2])}")
+                    move_cmd.linear.x = util.normalize(0, 0.26, 0, 50, data[1])
+                    move_cmd.angular.z = util.normalize(0, 0.26, 0, 50, data[2])
+                    self.publisher.publish(move_cmd)
             elif data[0] == packet.MODE_GESTURE:
                 print("gesture received!")
         
+        
         # Get position and publish to mqtt
-        self.transmit_queue.put([1,1])
+        self.transmit_queue.put([0x03, 1, 1])
+        time.sleep(0.01)
 
     def snaking(self):
         # Snaking back and forth. Just some fixed value.
@@ -95,8 +99,10 @@ class MoveTurtle(Node):
 
         # Then will just return back to init.
 
-def ros_main (publisher):
-    
+def ros_main (ros_mqtt, mqtt_ros):
+
+    rclpy.init(args=None)
+    publisher = MoveTurtle(ros_mqtt, mqtt_ros)
     rclpy.spin(publisher)
     
     # Destroy the node explicitly
