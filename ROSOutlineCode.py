@@ -19,9 +19,9 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 # On work station:
 # python goforward.py
 
-import rospy
+import rclpy
+from rclpy.node import Node
 from geometry_msgs.msg import Twist
-import maho.client
 
 gesture = 0
 left_distance = 0
@@ -30,59 +30,29 @@ move_cmd = Twist()
 max_distance = 4
 scalar = 0.1
 
-class GoForward():
+class MoveTurtle(Node):
     def __init__(self):
-
-        # initiliaze
-        rospy.init_node('GoForward', anonymous=False)
-
-	    # tell user how to stop TurtleBot
-	    rospy.loginfo("To stop TurtleBot CTRL + C")
-
-        # What function to call when you ctrl + c    
-        rospy.on_shutdown(self.shutdown)
+        super().__init__('move_node')
         
 	    # Create a publisher which can "talk" to TurtleBot and tell it to move
         # Tip: You may need to change cmd_vel_mux/input/navi to /cmd_vel if you're not using TurtleBot2
-        self.cmd_vel = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
      
-	    #TurtleBot will stop if we don't keep telling it to move.  How often should we tell it to move? 10 HZ
-        r = rospy.Rate(10)
 
         # Twist is a datatype for velocity
         #move_cmd = Twist()
 	    # let's go forward at 0.2 m/s
-        move_cmd.linear.x = 0
+     
+        move_cmd.linear.x = 0.2
 	    # let's turn at 0 radians/s
-	    move_cmd.angular.z = 0
-
-	    # as long as you haven't ctrl + c keeping doing...
-        while not rospy.is_shutdown():
-	        # publish the velocity
-            self.cmd_vel.publish(move_cmd)
-	        # wait for 0.1 seconds (10 HZ) and publish again
-            r.sleep()
-
-            if (gesture != 0):
-                # There is a gesture so call the function.
-                if (gesture == 1 or gesture == 2):
-                    self.snaking()
-                
-                # Add other gestures
-            else:
-                # No gesture, so normal motion.
-                move_cmd.linear.x = (max_distance - left_distance) * scalar 
-                # let's turn at 0 radians/s
-                move_cmd.angular.z = (max_distance - right_distance) * scalar 
-                        
+        move_cmd.angular.z = 0.0
+        # Create a timer that will gate the node actions twice a second
+        timer_period = 0.1  # seconds
+        self.timer = self.create_timer(timer_period, self.node_callback)
         
-    def shutdown(self):
-        # stop turtlebot
-        rospy.loginfo("Stop TurtleBot")
-	    # a default Twist has linear.x of 0 and angular.z of 0.  So it'll stop TurtleBot
-        self.cmd_vel.publish(Twist())
-	   # sleep just makes sure TurtleBot receives the stop command prior to shutting down the script
-        rospy.sleep(1)
+    # 
+    def node_callback(self):
+        self.cmd_vel.publish(move_cmd)
 
     def snaking(self):
         # Snaking back and forth. Just some fixed value.
@@ -108,13 +78,18 @@ class GoForward():
 
         # Then will just return back to init.
 
+def main (args=None):
+    rclpy.init(args=args)
+    publisher = MoveTurtle()
+    rclpy.spin(publisher)
+    
+    # Destroy the node explicitly
+    # (optional - otherwise it will be done automatically
+    # when the garbage collector destroys the node object)
+    publisher.destroy_node()
+    rclpy.shutdown()
  
 if __name__ == '__main__':
-    try:
-        GoForward()
-    except:
-        rospy.loginfo("GoForward node terminated.")
-
-
+    main()
 # MQTT thread that receives, decodes data and then sets global flag for 
 # the ROS. Set gesture, left and right distance values based on that.
