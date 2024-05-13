@@ -6,10 +6,8 @@
 ********************************************************************************
 *************************************************************************
 */
-#include "M5Core2.h"
-#include <WiFi.h>
-#include <PubSubClient.h>
 #include <micro_ros_arduino.h>
+#include <M5Core2.h>
 
 #include <stdio.h>
 #include <rcl/rcl.h>
@@ -21,7 +19,8 @@
 
 rcl_publisher_t ultrasonic_publisher;
 rcl_publisher_t gesture_publisher;
-std_msgs__msg__Int32 msg;
+std_msgs__msg__Int32 msg_pub;
+std_msgs__msg__Int32 msg_sub;
 rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
@@ -41,8 +40,20 @@ int y_pos = 110;
 int old_x_pos = 110;
 int old_y_pos = 110;
 
+#define RCCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){error_loop();}}
+#define RCSOFTCHECK(fn) { rcl_ret_t temp_rc = fn; if((temp_rc != RCL_RET_OK)){}}
+
+
+void error_loop() {
+  while (1) {
+    M5.Lcd.fillScreen(RED);
+    delay(100);
+  }
+}
+
 void UART_init() {
   Serial2.begin(115200, SERIAL_8N1, 13, 14);
+  Serial.begin(115200);
 }
 
 void draw_grid() {
@@ -75,7 +86,7 @@ void draw_grid() {
 }
 
 void drawTurtleBot(uint32_t x, uint32_t y) {
-  uint8_t padding = 6
+  uint8_t padding = 6;
   // Draw TurtleBot centred at x and y
   M5.Lcd.fillRect(x - padding, y - padding, 2 * padding, 2 * padding, BLUE);
   delay(10);
@@ -106,13 +117,12 @@ void LCD_init() {
     M5.Lcd.setTextColor(WHITE);
     M5.Lcd.setTextSize(1);
     M5.Lcd.setCursor(220, 40);
+    drawTurtleBot(x_pos, y_pos);
 }
 
-// Subriber callback ON_MSG_NEW
-//TODO Need to check if this is the right message type.
-void subscription_callback(const void* msgin) {
-    // Parse received position data and draw on the grid
-    const std__msgs__msg__Int16* msg = (const std_msgs_msgs__Int16*)msgin;
+void subscription_callback(const void *msgin)
+{
+    const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
     x_pos =(uint8_t)(((msg->data) >> 8) & 0xFF);
     y_pos = (uint8_t)((msg->data) & 0xFF);    
 }
@@ -148,14 +158,14 @@ int uart_poll() {
 
 void handle_ultrasonic_data(uint16_t left, uint16_t right) {
     //TODO: check if this is correct message type. Using 1 int32 to send messages across. Could cause errors since uint16_t?
-    msg.data = (left << 16) | right;
-    RCSOFTCHECK(rcl_publish(&ultrasonic_publisher, &msg, NULL));
+    msg_pub.data = (left << 16) | right;
+    RCSOFTCHECK(rcl_publish(&ultrasonic_publisher, &msg_pub, NULL));
 }
 
 void handle_gesture(uint8_t gesture) {
     //TODO: check if this is correct message type. Using 1 int32 to send messages across. Could cause errors since uint16_t?
-    msg.data = (int32_t)gesture;
-    RCSOFTCHECK(rcl_publish(&gesture_publisher, &msg, NULL));
+    msg_pub.data = (int32_t)gesture;
+    RCSOFTCHECK(rcl_publish(&gesture_publisher, &msg_pub, NULL));
 }
 
 void handle_packet(uint8_t* data) {
@@ -170,7 +180,7 @@ void handle_packet(uint8_t* data) {
         handle_ultrasonic_data(left, right);
     } else if (command == MODE_GESTURE) {
         // handle gesture
-        gesture = data[3];
+        uint8_t gesture = data[3];
         handle_gesture(gesture);
     } else {
         return;
@@ -181,16 +191,17 @@ void handle_packet(uint8_t* data) {
 void setup() {
     // Initialise M5 Core
     M5.begin();
+    set_microros_transports();
 
     UART_init();
     LCD_init();
-    set_microros_transports();
 
     delay(2000);
 
     rcl_allocator_t allocator = rcl_get_default_allocator();
     rclc_support_t support;
     rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+    
 
     RCCHECK(rcl_init_options_init(&init_options, allocator));
     rmw_init_options_t* rmw_options = rcl_init_options_get_rmw_init_options(&init_options);
@@ -213,45 +224,37 @@ void setup() {
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
         "M5Core_UltraSonic_Publisher"
     ));
+    Serial.println("Ultrasonic publisher Created");
 
     RCCHECK(rclc_publisher_init_default(
         &gesture_publisher,
-        &node
+        &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-        "M%Core_Gesture_Publisher"
+        "M5Core_Gesture_Publisher"
     ));
 
     // create subscriber
     // TODO: need to check message type, and topic name
-    RCCHECK(rcls_subscription_init_default(
+    RCCHECK(rclc_subscription_init_default(
         &subscriber,
         &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), 
-        "/position:"
+        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+        "/position"
     ));
 
     RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-    RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+    RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg_sub, &subscription_callback, ON_NEW_DATA));
 
-    msg.data = 0;
+    msg_pub.data = 0;
+    msg_sub.data = 0;
 
-    // Start infinite loop I have done this to avoid globals
-    while (1) {
-    //  Check if client has lost connection, if so reconnect
-        if (!client.connected()) {
-        reConnect();
-        }
-
-        // Check Serial Communication
-        if (uart_poll() == 1) {
-            handle_packet(data);
-        }
-
-        lcd_handler();
-        RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
-    }
 }
 
 void loop() {
+    if (uart_poll() == 1) {
+        handle_packet(data);
+    }
 
+    lcd_handler();
+    RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
