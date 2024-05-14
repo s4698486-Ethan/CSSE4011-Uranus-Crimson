@@ -36,10 +36,12 @@ max_distance = 4
 scalar = 0.1
 
 class MoveTurtle(Node):
-    def __init__(self, transmit_queue,receive_queue):
+    def __init__(self, move_mqtt, mqtt_move):
         super().__init__('move_node')
-        self.receive_queue = receive_queue
-        self.transmit_queue = transmit_queue
+        self.mqtt_move = mqtt_move
+        self.move_mqtt = move_mqtt
+
+        self.test = 1
         
 	    # Create a publisher which can "talk" to TurtleBot and tell it to move
         # Tip: You may need to change cmd_vel_mux/input/navi to /cmd_vel if you're not using TurtleBot2
@@ -54,31 +56,31 @@ class MoveTurtle(Node):
 	    # let's turn at 0 radians/s
         move_cmd.angular.z = 0.0
         # Create a timer that will gate the node actions twice a second
-        timer_period = 0.1  # seconds
+        timer_period = 0.00001  # seconds
         self.timer = self.create_timer(timer_period, self.node_callback)
         
     # 
     def node_callback(self):
-        data = util.get_queue_data(self.receive_queue)
+        data = util.get_queue_data(self.mqtt_move)
         if (data is not None):
             if data[0] == packet.MODE_DEFAULT:
-                if (data[1] < 50 and data[2] < 50):
-                    print(f"linear x: {util.normalize(0, 0.26, 0, 50, data[1])}. angular z: {util.normalize(0, 0.26, 0, 100, data[2])}")
-                    move_cmd.linear.x = util.normalize(0, 0.26, 0, 50, data[1])
-                    move_cmd.angular.z = util.normalize(0, 0.26, 0, 50, data[2])
+                if (data[1] < 75 and data[2] < 75):
+                    print(f"linear x: {util.normalize(0, 0.26, 0, 75, data[1])}. angular z: {0.26 - util.normalize(0, 0.52, 0, 75, data[2])}")
+                    move_cmd.linear.x = util.normalize(0, 0.26, 0, 75, data[1])
+                    move_cmd.angular.z = 0.26 - util.normalize(0, 0.52, 0, 75, data[2])
                     self.publisher.publish(move_cmd)
             elif data[0] == packet.MODE_GESTURE:
                 print("gesture received!")
+                self.gesture(data[1])
+
         
         
-        # Get position and publish to mqtt
-        self.transmit_queue.put([0x03, 1, 1])
         time.sleep(0.01)
 
-    def snaking(self):
+    def gesture(self, gesture):
         # Snaking back and forth. Just some fixed value.
-        move_cmd.linear.x = 1
-        angular_freq = 0
+        move_cmd.linear.x = 1.0
+        angular_freq = 0.0
         step = 0.1
 
         if gesture == 2:
@@ -96,13 +98,12 @@ class MoveTurtle(Node):
 
         # Reset back to no gesture after doing full snake.
         gesture = 0
-
+        
         # Then will just return back to init.
 
-def ros_main (ros_mqtt, mqtt_ros):
+def ros_move_node_run(move_mqtt, mqtt_move):
 
-    rclpy.init(args=None)
-    publisher = MoveTurtle(ros_mqtt, mqtt_ros)
+    publisher = MoveTurtle(move_mqtt, mqtt_move)
     rclpy.spin(publisher)
     
     # Destroy the node explicitly

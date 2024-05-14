@@ -1,6 +1,7 @@
 import threading
 import mqtt as mqtt
 import ROS_Move_Node as rmn
+import ROS_Pos_Node as rpn
 import time
 import queue
 import rclpy
@@ -10,29 +11,34 @@ import uart as uart
 if __name__ == '__main__':
     
 
-    mqtt_ros = queue.Queue(maxsize=10)
-    ros_mqtt = queue.Queue(maxsize=10)
+    mqtt_move = queue.Queue()
+    move_mqtt = queue.Queue()
 
-    # mqttobject = mqtt.MQTT(mqtt_ros, ros_mqtt)
+    mqtt_pos = queue.Queue()
+    pos_mqtt = queue.Queue()
+
+
+
+    rclpy.init()
     
-    
-    # t1 = threading.Thread(target=mqttobject.run)
-    # t1.daemon = True
-    # t1.start()
 
-    t2 = threading.Thread(target=rmn.ros_main, args=[ros_mqtt, mqtt_ros])
-    t2.daemon = True
-    t2.start()
-    # mqttobject.run()
+    mqttobject = mqtt.MQTT(mqtt_move, move_mqtt, mqtt_pos, pos_mqtt)
+    turtle_position = rpn.TurtlePos(pos_mqtt, mqtt_pos)
+    move_turtle = rmn.MoveTurtle(move_mqtt, mqtt_move)
 
-    uart_object = uart.Uart(mqtt_ros, ros_mqtt)
+    t1 = threading.Thread(target=mqttobject.run)
+    t1.start()
 
-    t3 = threading.Thread(target=uart_object.run)
-    t3.daemon = True
-    t3.start()
+    executor = rclpy.executors.MultiThreadedExecutor()
+    executor.add_node(move_turtle)
+    executor.add_node(turtle_position)
 
+    # Spin in a separate thread
+    executor_thread = threading.Thread(target=executor.spin, daemon=True)
+    executor_thread.start()
 
     while(1):
-        time.sleep(100000000)
+        time.sleep(1000)
+
 
     exit(1)
