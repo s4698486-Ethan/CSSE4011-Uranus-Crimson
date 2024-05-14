@@ -9,6 +9,7 @@
 #include "M5Core2.h"
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -21,14 +22,16 @@ PubSubClient client(espClient);
 #define PACKET_START 0xAA
 #define MODE_DEFAULT 0x01
 #define MODE_GESTURE 0x02
+#define MODE_POSITION 0x03
 
 #define MAX_DATA_LENGTH 60 // Maximum length of data packet, adjust as needed
 
-
-int x_pos = 110;
-int y_pos = 110;
-int old_x_pos = 110;
-int old_y_pos = 110;
+float actual_x = 2;
+float actual_y = 2;
+float x_pos = 2;
+float y_pos = 2;
+float old_x_pos = 110;
+float old_y_pos = 110;
 
 uint8_t data[MAX_DATA_LENGTH];
 
@@ -44,28 +47,71 @@ void setupWifi(const char* ssid, const char* password) {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-    M5.Lcd.print("Message arrived [");
-    M5.Lcd.print(topic);
-    M5.Lcd.print("] ");
-    for (int i = 0; i < length; i++) {
-        M5.Lcd.print((char)payload[i]);
+    if (strcmp(topic, "s4702018/M5/position") == 0) {
+        // M5.Lcd.print("Message arrived [");
+        // M5.Lcd.print(topic);
+        // M5.Lcd.print("] ");
+        
+        // Assuming payload is a null-terminated string
+        payload[length] = '\0';
+
+        // Create a JSON document
+        StaticJsonDocument<200> doc;
+
+        // Parse the JSON payload
+        DeserializationError error = deserializeJson(doc, payload);
+
+        // Check for parsing errors
+        if (error) {
+            // M5.Lcd.print("JSON parsing failed: ");
+            // M5.Lcd.println(error.c_str());
+            return;
+        }
+
+        // Extract command, x, and y values
+        int command = doc["command"];
+
+        if (command == MODE_POSITION) {
+            float x = doc["x"];
+            float y = doc["y"];
+            actual_x = x;
+            actual_y = y;
+            if (x > 2.0) {
+                x = 2.0;
+            } else if (x < 0.0) {
+                x = 0;
+            } else {
+                x = (x - 0.0) / (2.0 - 0.0) * ((210 - 10) + 210);
+            }
+            // Calculate pixel coordinates within the grid
+            
+            if (y > 2.0) {
+                y = 2.0;
+            } else if (y < 0.0) {
+                y = 0;
+            } else {
+                y = (y - 0.0) / (2.0 - 0.0) * ((210 - 10) + 210);
+            }
+
+            x_pos = x;
+            y_pos = y;
+        }
     }
-    M5.Lcd.println();
 }
 
 void reConnect() {
     while (!client.connected()) {
         //M5.Lcd.print("Attempting MQTT connection...");
         // Create a random client ID
-        String clientId = "45815018-";
+        String clientId = "4702018";
         clientId += String(random(0xffff), HEX);
         // Attempt to connect. 
         if (client.connect(clientId.c_str())) {
-            client.subscribe("45815018");
-            client.subscribe("un45815018");
+            client.subscribe("s4702018/M5/ultrasonic");
+            client.subscribe("s4702018/M5/position");
             continue;
         } else {
-            delay(5000);
+            delay(1000);
         }
     }
 }
@@ -106,29 +152,29 @@ void draw_grid() {
 
 }
 
-void drawTurtleBot(uint32_t x, uint32_t y) {
-  // Draw TurtleBot centred at x and y
-  M5.Lcd.fillRect(x - PADDING, y - PADDING, 2 * PADDING, 2 * PADDING, BLUE);
-  delay(10);
+void drawTurtleBot(float x, float y) {    
+    // Draw TurtleBot centred at x and y
+    M5.Lcd.fillRect(x - PADDING, y - PADDING, 2 * PADDING, 2 * PADDING, BLUE);
+    delay(10);
 }
 
-void lcd_draw_coordinates(int x, int y) {
-  // Create black rectangle over old coordinates
-  M5.Lcd.fillRect(220, 40, 180, 20, BLACK);
-  M5.Lcd.setCursor(220, 40);
-  M5.Lcd.printf("Coords: (%d, %d)", x, y);
-  delay(10);
+void lcd_draw_coordinates(float x, float y) {
+    // Create black rectangle over old coordinates
+    M5.Lcd.fillRect(220, 40, 180, 20, BLACK);
+    M5.Lcd.setCursor(220, 40);
+    char x_str[8]; // Enough to hold a float with one decimal place
+    char y_str[8]; // Enough to hold a float with one decimal place
+    dtostrf(x, 6, 1, x_str); // Format grid_x to one decimal place
+    dtostrf(y, 6, 1, y_str); // Format grid_y to one decimal place
+    M5.Lcd.printf("X:%fY:%f",x, y);
 }
 
 void lcd_handler() {
-  M5.Lcd.setCursor(220, 10);
-  M5.Lcd.printf("Gesture:");
-  delay(10);
 
   if (old_x_pos != x_pos || old_y_pos != y_pos) {
     old_x_pos = x_pos;
     old_y_pos = y_pos;
-    lcd_draw_coordinates(x_pos, y_pos);
+    lcd_draw_coordinates(actual_x, actual_y);
 
     drawTurtleBot(x_pos, y_pos);
 
@@ -137,13 +183,13 @@ void lcd_handler() {
 
 void LCD_init() {
   // Draw initial Grid
-    delay(10);
     M5.Lcd.fillScreen(BLACK);
-    delay(10);
     draw_grid();
     M5.Lcd.setTextColor(WHITE);
     M5.Lcd.setTextSize(1);
     M5.Lcd.setCursor(220, 40);
+    drawTurtleBot(x_pos, y_pos);
+    lcd_draw_coordinates(x_pos, y_pos);
 }
 
 void UART_init() {
@@ -151,7 +197,11 @@ void UART_init() {
 }
 
 void handle_gesture(uint8_t gesture) {
-    const char* mqttTopic = "URANUS-CRIMSON_M5CoreUpload";
+    M5.Lcd.fillRect(5, 212, 200, 220, BLACK);
+    M5.Lcd.setCursor(10, 215);
+    M5.Lcd.printf("Gesture: %d", gesture);
+    const char* mqttTopic = "s4702018/M5/ultrasonic";
+    unsigned long timeStamp = millis();
     
     StaticJsonDocument<200> doc;
     doc["timestamp"] = timeStamp;
@@ -164,7 +214,6 @@ void handle_gesture(uint8_t gesture) {
     
 
     if (client.publish(mqttTopic, jsonString.c_str())) {
-      // idk if this does anything
         Serial.println("Published to MQTT");
     } else {
         Serial.println("Failed to publish to MQTT");
@@ -179,11 +228,13 @@ void handle_packet(uint8_t* data) {
     uint16_t left = ((uint16_t)data[2] << 8) | (uint16_t)data[3];
     uint16_t right = ((uint16_t)data[4] << 8) | (uint16_t)data[5];
 
+    // In normal. Hence, display 
+
     // Call handle function
     handle_ultrasonic_data(left, right);
   } else if (command == MODE_GESTURE) {
     // handle gesture
-    gesture = data[3];
+    uint8_t gesture = data[2];
     handle_gesture(gesture);
   } else {
     return;
@@ -191,9 +242,12 @@ void handle_packet(uint8_t* data) {
 }
 
 void handle_ultrasonic_data(uint16_t left, uint16_t right) {
+    M5.Lcd.fillRect(5, 212, 200, 220, BLACK);
+    M5.Lcd.setCursor(10, 215);
+    M5.Lcd.printf("Default");
   // publish to mqtt
-
-    const char* mqttTopic = "URANUS-CRIMSON_M5CoreUpload";
+    const char* mqttTopic = "s4702018/M5/ultrasonic";
+    unsigned long timeStamp = millis();
     
     StaticJsonDocument<200> doc;
     doc["timestamp"] = timeStamp;
@@ -251,8 +305,6 @@ void setup() {
   const char* mqtt_server = "csse4011-iot.zones.eait.uq.edu.au";
 
  
-
-
   // Initialise M5 Core
     M5.begin();
 
@@ -268,7 +320,7 @@ void setup() {
 
     // Start infinite loop I have done this to avoid globals
     while (1) {
-      Check if client has lost connection, if so reconnect
+      //Check if client has lost connection, if so reconnect
       if (!client.connected()) {
         reConnect();
       }
