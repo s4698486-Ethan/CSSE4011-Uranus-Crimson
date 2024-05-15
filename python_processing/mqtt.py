@@ -5,9 +5,11 @@ import packet as packet
 import util as util
 
 class MQTT():
-    def __init__(self, transmit_queue, receive_queue) -> None:
-        self.transmit_queue = transmit_queue
-        self.receive_queue = receive_queue
+    def __init__(self, mqtt_move, move_mqtt, mqtt_pos, pos_mqtt) -> None:
+        self.mqtt_move = mqtt_move
+        self.move_mqtt = move_mqtt
+        self.mqtt_pos = mqtt_pos
+        self.pos_mqtt = pos_mqtt
         
     def run(self):
         """
@@ -30,26 +32,27 @@ class MQTT():
 
 
         while True:
-            self.mqtt_client.loop()
+            if not self.mqtt_client.is_connected():
+                self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
             # Start MQTT loop
-            data = util.get_queue_data(self.receive_queue)
+            self.mqtt_client.loop()
+            data = util.get_queue_data(self.pos_mqtt)
             if data is not None:
-                x = data[0]
-                y = data[1]
+                x = data[1]
+                y = data[2]
                 position_data = {
-                    "command" : packet.MODE_DEFAULT,
+                    "command" : packet.MODE_POSITION,
                     "x" : x,
                     "y" : y,
                 }
 
                 json_data = json.dumps(position_data)
                 json_data += '\n'
-                print(f"Publishing: {json_data  }")
+                print(position_data)
 
-                self.mqtt_client.publish(json_data)
+                self.mqtt_client.publish("s4702018/M5/position", json_data)
+            time.sleep(0.1)
                 
-                time.sleep(0.5)
-
     def on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code.is_failure:
             print(f"Failed to connect: {reason_code}. loop_forever() will retry connection")
@@ -57,7 +60,8 @@ class MQTT():
             # we should always subscribe from on_connect callback to be sure
             # our subscribed is persisted across reconnections.
             print("Connected!")
-            client.subscribe("URANUS-CRIMSON_M5CoreUpload")
+            client.subscribe("s4702018/M5/ultrasonic")
+            client.subscribe("s4702018/M5/position")
 
     def on_subscribe(self, client, userdata, mid, reason_code_list, properties):
     # Since we subscribed only for a single channel, reason_code_list contains
@@ -84,7 +88,6 @@ class MQTT():
             if not self.mqtt_client.user_data_get():
                 print("Empty payload received.")
                 return
-
             # Get the latest appended message payload
             latest_payload = self.mqtt_client.user_data_get()[-1]
             print(latest_payload)
@@ -93,16 +96,21 @@ class MQTT():
             json_data = latest_payload.decode('utf-8')
             data_dict = json.loads(json_data)
 
+
             # Not a gesture
             if data_dict.get('gesture') == 0:
+                
                 # Extract distance
                 left_reading = data_dict.get('left')
                 right_reading = data_dict.get('right')
+                
 
                 if left_reading is not None and right_reading is not None:
-                    self.transmit_queue.put([packet.MODE_DEFAULT, left_reading, right_reading])
-            else:
-                self.transmit_queue.put([packet.MODE_GESTURE, 0, 0])
+
+                    self.mqtt_move.put([packet.MODE_DEFAULT, left_reading, right_reading])
+            elif data_dict.get('gesture') == 1 or data_dict.get('gesture') == 2 or data_dict.get('gesture') == 3 or data_dict.get('gesture') ==4 or data_dict.get('gesture') ==5:
+                gesture = data_dict.get('gesture')
+                self.mqtt_move.put([packet.MODE_GESTURE, gesture, 0])
 
 
         except json.decoder.JSONDecodeError as e:
