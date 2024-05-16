@@ -65,7 +65,7 @@ class MoveTurtle(Node):
         if (data is not None):
             if data[0] == packet.MODE_DEFAULT:
                 if (data[1] < 75 and data[2] < 75):
-                    # print(f"linear x: {util.normalize(0, 0.26, 0, 75, data[1])}. angular z: {0.26 - util.normalize(0, 0.52, 0, 75, data[2])}")
+                    print(f"linear x: {util.normalize(0, 0.26, 0, 75, data[1])}. angular z: {0.26 - util.normalize(0, 0.52, 0, 75, data[2])}")
                     move_cmd.linear.x = util.normalize(0, 0.26, 0, 75, data[1])
                     move_cmd.angular.z = 0.26 - util.normalize(0, 0.52, 0, 75, data[2])
                     self.publisher.publish(move_cmd)
@@ -79,24 +79,64 @@ class MoveTurtle(Node):
 
     def gesture(self, gesture):
         # Snaking back and forth. Just some fixed value.
-        move_cmd.linear.x = 1.0
-        angular_freq = 0.0
-        step = 0.1
-
-        if gesture == 2:
+        
+        if gesture == 1:
+            move_cmd.linear.x = 1.0
+            move_cmd.angular.z = 0.0
+            step = 0.1
+            while True:
+                # Basically if we start rotating too far, then make
+                # it start rotating back the other way.
+                if move_cmd.angular.z >= 1.5 or move_cmd.angular.z <= -1.5:
+                    step *= -1
+                elif move_cmd.angular.z <= -1.5:
+                    # One snake each way is enough.
+                    break
+                move_cmd.angular.z += step
+                self.publisher.publish(move_cmd)
+        elif gesture == 2:
             # Start snaking other way
+            move_cmd.linear.x = 1.0
+            move_cmd.angular.z = 0.0
             step = -0.1
             while True:
                 # Basically if we start rotating too far, then make
                 # it start rotating back the other way.
-                if angular_freq >= 3 or angular_freq <= -3:
+                if move_cmd.angular.z >= 1.5 or move_cmd.angular.z <= -1.5:
                     step *= -1
-                elif angular_freq <= -3:
+                if move_cmd.angular.z <= -1.5:
                     # One snake each way is enough.
                     break
                 move_cmd.angular.z += step
+                self.publisher.publish(move_cmd)
+    
+        elif gesture == 3:
+            # Donuts!!!
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = 1.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 5):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
 
-        # Reset back to no gesture after doing full snake.
+        elif gesture == 4:
+            # Donuts 2!!!
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = -1.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 5):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+        elif gesture == 5:
+            # STOP!!!
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = 0.0
+            while (new_t - init_t < 5):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+        # Reset back to no gesture
         gesture = 0
         
         # Then will just return back to init.
