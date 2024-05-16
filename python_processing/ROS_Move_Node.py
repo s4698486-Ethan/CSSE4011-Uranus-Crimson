@@ -65,7 +65,7 @@ class MoveTurtle(Node):
         if (data is not None):
             if data[0] == packet.MODE_DEFAULT:
                 if (data[1] < 75 and data[2] < 75):
-                    print(f"linear x: {util.normalize(0, 0.26, 0, 75, data[1])}. angular z: {0.26 - util.normalize(0, 0.52, 0, 75, data[2])}")
+                    # print(f"linear x: {util.normalize(0, 0.26, 0, 75, data[1])}. angular z: {0.26 - util.normalize(0, 0.52, 0, 75, data[2])}")
                     move_cmd.linear.x = util.normalize(0, 0.26, 0, 75, data[1])
                     move_cmd.angular.z = 0.26 - util.normalize(0, 0.52, 0, 75, data[2])
                     self.publisher.publish(move_cmd)

@@ -26,7 +26,7 @@ class TurtlePos(Node):
         x_init = np.array([0, 0, 0, 0])  # Initial state estimate (changed to (0,0))
         cov_init = np.eye(4) * 0.1  # Initial covariance matrix
         meas_err_slam = 0.025 # Measurement error for ultrasound
-        meas_err_odom = 0.5  # Measurement error for RF
+        meas_err_odom = 100  # Measurement error for RF
         proc_err = 1e-6  # Process error
         self.kalman_filter = Kalman(x_init, cov_init, meas_err_slam, meas_err_odom, proc_err)
 
@@ -36,6 +36,8 @@ class TurtlePos(Node):
         self.odom_y = msg.pose.pose.position.y
         self.kalman_filter.update_odom((self.odom_x, self.odom_y))
         self.filtered_position = self.kalman_filter.x_hat
+        # self.pos_mqtt.put([packet.MODE_POSITION, self.filtered_position[0], -self.filtered_position[1]])
+        # self.pos_mqtt.put([packet.MODE_POSITION, self.odom_x, self.odom_y])
         
         
     def cb_2(self, msg):
@@ -47,7 +49,7 @@ class TurtlePos(Node):
         # print("odom coordinates - x: {}, y: {}".format(self.odom_x, self.odom_y))
         # print("AMCL POSE - x: {}, y: {}".format(x, y))
         # self.pos_mqtt.put([packet.MODE_POSITION, x, y])
-        self.pos_mqtt.put([packet.MODE_POSITION, self.filtered_position[0], self.filtered_position[1]])
+        self.pos_mqtt.put([packet.MODE_POSITION, self.filtered_position[1], -self.filtered_position[0]])
 
 
 

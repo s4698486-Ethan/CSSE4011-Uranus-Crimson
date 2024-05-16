@@ -1,6 +1,5 @@
 import numpy as np
 
-measured_power_test = [-58, -59, -53, -52,  -54, -54, -57, -53]
 ndim = 4
 dt = 0.75  # sec
 

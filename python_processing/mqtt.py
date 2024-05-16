@@ -23,38 +23,24 @@ class MQTT():
 
         self.mqtt_client.username_pw_set(username="s4702018", password="a3s7fSbjs4qS")
 
-
         self.mqtt_client.user_data_set([])
-    # Connect to MQTT broker
-        not_connected = True
-        while(not_connected == True):
-            try:
-                self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
-                not_connected = True
-            except:
-                print("Couldn't connect to MQTT server. Trying again...")
-                not_connected = False
-        print("MQTT Connected")
-
-        time1 = time.time()
-        time2 = time.time()
-        x = 0
-        y = 0
-        step = 0.1
+        self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
 
         while True:
             if not self.mqtt_client.is_connected():
                 self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
             # Start MQTT loop
             self.mqtt_client.loop()
-            # data = util.get_queue_data(self.pos_mqtt)
-            # if data is not None:
-            time2 = time.time()
+            data = util.get_queue_data(self.pos_mqtt)
+            if data is not None:
+            # time2 = time.time()
         
-            if time2 - time1 >= 1:
-                # x = data[1]
-                # y = data[2]
-                x += step
+            # if time2 - time1 >= 1:
+                x = data[1]
+                y = data[2]
+                print(y)
+                print('\n\n\n\n')
+                # x += step
                 # y += step
                 position_data = {
                     "command" : packet.MODE_POSITION,
@@ -107,7 +93,7 @@ class MQTT():
                 return
             # Get the latest appended message payload
             latest_payload = self.mqtt_client.user_data_get()[-1]
-            print(latest_payload)
+            # print(latest_payload)
 
             # Parse JSON payload
             json_data = latest_payload.decode('utf-8')

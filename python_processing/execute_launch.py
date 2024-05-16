@@ -2,11 +2,11 @@ import subprocess
 import time
 import concurrent.futures
 
-command = ['ros2', 'launch', './launch/4011_launch.py']
+command = ['ros2', 'launch', './python_processing/launch/4011_launch.py']
 
 
 def execute_command():
-    subprocess.run(command)
+    subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
 # execute_command()
 
