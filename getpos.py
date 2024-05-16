@@ -13,7 +13,8 @@ class Pos_Sub(Node):
         self.odom_x = 0
         self.odom_y = 0
         self.odom_sub = self.create_subscription(Odometry, '/odom', self.cb, 10)
-        self.amcl_sub = self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.cb_2, 10)
+        #self.amcl_sub = self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.cb_2, 10)
+        self.amcl_sub = self.create_subscription(PoseWithCovarianceStamped, '/pose', self.cb_2, 10)
         self.init_pose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
         self.init_pose = PoseWithCovarianceStamped()
         self.init_pose.header.frame_id = 'map'
@@ -42,7 +43,7 @@ class Pos_Sub(Node):
         x = position.x
         y = position.y
         print("odom coordinates - x: {}, y: {}".format(self.odom_x, self.odom_y))
-        print("AMCL POSE - x: {}, y: {}".format(x, y))
+        print("SLAM POSE - x: {}, y: {}".format(x, y))
 def main(args=None):
     rclpy.init(args=args)
     subscriber = Pos_Sub()
