@@ -89,11 +89,15 @@ class MoveTurtle(Node):
                 # it start rotating back the other way.
                 if move_cmd.angular.z >= 1.5 or move_cmd.angular.z <= -1.5:
                     step *= -1
-                elif move_cmd.angular.z <= -1.5:
+                if move_cmd.angular.z <= -1.5:
                     # One snake each way is enough.
                     break
                 move_cmd.angular.z += step
-                self.publisher.publish(move_cmd)
+                init_t = time.time()
+                new_t = time.time()
+                while (new_t - init_t < 5):
+                    self.publisher.publish(move_cmd)
+                    new_t = time.time()
         elif gesture == 2:
             # Start snaking other way
             move_cmd.linear.x = 1.0
@@ -108,8 +112,11 @@ class MoveTurtle(Node):
                     # One snake each way is enough.
                     break
                 move_cmd.angular.z += step
-                self.publisher.publish(move_cmd)
-    
+                init_t = time.time()
+                new_t = time.time()
+                while (new_t - init_t < 5):
+                    self.publisher.publish(move_cmd)
+                    new_t = time.time()
         elif gesture == 3:
             # Donuts!!!
             move_cmd.linear.x = 0.0
