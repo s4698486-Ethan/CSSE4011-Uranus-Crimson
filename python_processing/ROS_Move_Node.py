@@ -67,7 +67,7 @@ class MoveTurtle(Node):
                 if (data[1] < 75 and data[2] < 75):
                     print(f"linear x: {util.normalize(0, 0.26, 0, 75, data[1])}. angular z: {0.26 - util.normalize(0, 0.52, 0, 75, data[2])}")
                     move_cmd.linear.x = util.normalize(0, 0.26, 0, 75, data[1])
-                    move_cmd.angular.z = 0.26 - util.normalize(0, 0.52, 0, 75, data[2])
+                    move_cmd.angular.z = 1.82 - util.normalize(0, 3.64, 0, 75, data[2])
                     self.publisher.publish(move_cmd)
             elif data[0] == packet.MODE_GESTURE:
                 print("gesture received!")
@@ -120,24 +120,32 @@ class MoveTurtle(Node):
         elif gesture == 3:
             # Donuts!!!
             move_cmd.linear.x = 0.0
-            move_cmd.angular.z = 1.0
+            move_cmd.angular.z = 1.82
             init_t = time.time()
             new_t = time.time()
             while (new_t - init_t < 5):
                 self.publisher.publish(move_cmd)
                 new_t = time.time()
+            move_cmd.linear.x = 0.0
+            move_cmd._angular.z = 0.0    
+            self.publisher.publish(move_cmd)
 
         elif gesture == 4:
             # Donuts 2!!!
             move_cmd.linear.x = 0.0
-            move_cmd.angular.z = -1.0
+            move_cmd.angular.z = -1.82
             init_t = time.time()
             new_t = time.time()
             while (new_t - init_t < 5):
                 self.publisher.publish(move_cmd)
                 new_t = time.time()
+            move_cmd.linear.x = 0.0
+            move_cmd._angular.z = 0.0    
+            self.publisher.publish(move_cmd)
         elif gesture == 5:
             # STOP!!!
+            init_t = time.time()
+            new_t = time.time()
             move_cmd.linear.x = 0.0
             move_cmd.angular.z = 0.0
             while (new_t - init_t < 5):
