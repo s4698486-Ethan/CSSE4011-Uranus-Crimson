@@ -18,6 +18,10 @@ from std_msgs.msg import Float64MultiArray
  
 # Math library
 import math 
+
+import packet as packet
+
+import time
  
  
 class FrameListener(Node):
@@ -26,10 +30,11 @@ class FrameListener(Node):
   The class listens to coordinate transformations and 
   publishes the 2D pose at a specific time interval.
   """
-  def __init__(self):
+  def __init__(self, pos_mqtt):
     """
     Class constructor to set up the node
     """
+    self.pos_mqtt = pos_mqtt
     
     # Initiate the Node class's constructor and give it a name
     super().__init__('map_base_link_frame_listener')
@@ -82,6 +87,7 @@ class FrameListener(Node):
     except TransformException as ex:
       self.get_logger().info(
         f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
+      time.sleep(0.5)
       return
        
     # Publish the 2D pose
@@ -96,6 +102,7 @@ class FrameListener(Node):
     msg = Float64MultiArray()
     msg.data = [self.current_x, self.current_y, self.current_yaw]   
     print (msg.data)
+    self.pos_mqtt.put([packet.MODE_POSITION, -self.current_y, self.current_x])
     #self.publisher_2d_pose.publish(msg) 
    
   def euler_from_quaternion(self, x, y, z, w):
