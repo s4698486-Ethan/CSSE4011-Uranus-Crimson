@@ -26,20 +26,36 @@ class MQTT():
 
         self.mqtt_client.user_data_set([])
     # Connect to MQTT broker
-        self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
-        print("running")
+        not_connected = True
+        while(not_connected == True):
+            try:
+                self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
+                not_connected = True
+            except:
+                print("Couldn't connect to MQTT server. Trying again...")
+                not_connected = False
+        print("MQTT Connected")
 
-
+        time1 = time.time()
+        time2 = time.time()
+        x = 0
+        y = 0
+        step = 0.1
 
         while True:
             if not self.mqtt_client.is_connected():
                 self.mqtt_client.connect("csse4011-iot.zones.eait.uq.edu.au")
             # Start MQTT loop
             self.mqtt_client.loop()
-            data = util.get_queue_data(self.pos_mqtt)
-            if data is not None:
-                x = data[1]
-                y = data[2]
+            # data = util.get_queue_data(self.pos_mqtt)
+            # if data is not None:
+            time2 = time.time()
+        
+            if time2 - time1 >= 1:
+                # x = data[1]
+                # y = data[2]
+                x += step
+                # y += step
                 position_data = {
                     "command" : packet.MODE_POSITION,
                     "x" : x,
@@ -51,6 +67,7 @@ class MQTT():
                 print(position_data)
 
                 self.mqtt_client.publish("s4702018/M5/position", json_data)
+                time1 = time.time()
             time.sleep(0.1)
                 
     def on_connect(self, client, userdata, flags, reason_code, properties):

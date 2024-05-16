@@ -18,8 +18,9 @@ class TurtlePos(Node):
         self.filtered_position = 0
 	    # Create a publisher which can "talk" to TurtleBot and tell it to move
         # Tip: You may need to change cmd_vel_mux/input/navi to /cmd_vel if you're not using TurtleBot2
-        self.subscription = self.create_subscription(Odometry, '/odom', self.cb, 10)
-        self.amcl_sub = self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.cb_2, 10)
+        self.odom_sub = self.create_subscription(Odometry, '/odom', self.cb, 10)
+        #self.amcl_sub = self.create_subscription(PoseWithCovarianceStamped, '/amcl_pose', self.cb_2, 10)
+        self.SLAM_sub = self.create_subscription(PoseWithCovarianceStamped, '/pose', self.cb_2, 10)
 
         # Initialize Kalman filter
         x_init = np.array([0, 0, 0, 0])  # Initial state estimate (changed to (0,0))
