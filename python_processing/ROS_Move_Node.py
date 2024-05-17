@@ -27,6 +27,7 @@ import threading
 import mqtt as mqtt
 import util as util
 import packet as packet
+import numpy as np
 
 gesture = 0
 left_distance = 0
@@ -36,12 +37,14 @@ max_distance = 4
 scalar = 0.1
 
 class MoveTurtle(Node):
-    def __init__(self, move_mqtt, mqtt_move):
+    def __init__(self, move_mqtt, mqtt_move, pos_move):
         super().__init__('move_node')
         self.mqtt_move = mqtt_move
         self.move_mqtt = move_mqtt
+        self.pos_move = pos_move
 
         self.test = 1
+        self.oob_flag = 0
         
 	    # Create a publisher which can "talk" to TurtleBot and tell it to move
         # Tip: You may need to change cmd_vel_mux/input/navi to /cmd_vel if you're not using TurtleBot2
@@ -61,6 +64,15 @@ class MoveTurtle(Node):
         
     # 
     def node_callback(self):
+        turn_around = util.get_queue_data(self.pos_move)
+        if (turn_around is not None):
+            
+            self.turn_around()
+            data = util.get_queue_data(self.mqtt_move)
+            self.pos_move.queue.clear()
+            self.mqtt_move.queue.clear()
+            #with self.pos_move.mutex:
+            return
         data = util.get_queue_data(self.mqtt_move)
         if (data is not None):
             if data[0] == packet.MODE_DEFAULT:
@@ -77,46 +89,177 @@ class MoveTurtle(Node):
         
         time.sleep(0.01)
 
+    def turn_around(self):
+        print("turn arround")
+        move_cmd.linear.x = -0.2
+        move_cmd.angular.z = 0.0
+        init_t = time.time()
+        new_t = time.time()
+        while(new_t - init_t < 0.3):
+            self.publisher.publish(move_cmd)
+            new_t = time.time()
+
+        move_cmd.linear.x = 0.0
+        move_cmd.angular.z = np.pi / 2
+        init_t = time.time()
+        new_t = time.time()
+        while(new_t - init_t < 2):
+            self.publisher.publish(move_cmd)
+            new_t = time.time()
+        move_cmd.linear.x = 0.15
+        move_cmd.angular.z = 0.0
+        init_t = time.time()
+        new_t = time.time()
+        while(new_t - init_t < 5):
+            self.publisher.publish(move_cmd)
+            new_t = time.time()
+        move_cmd.linear.x = 0.0
+        move_cmd.angular.z = 0.0
+        init_t = time.time()
+        new_t = time.time()
+        while(new_t - init_t < 0.8):
+            self.publisher.publish(move_cmd)
+            new_t = time.time()
+        
+        #with self.pos_move.mutex:
+        #    self.pos_move.queue.clear()
+        self.oob_flag = 0
+        
+
     def gesture(self, gesture):
         # Snaking back and forth. Just some fixed value.
         
         if gesture == 1:
-            move_cmd.linear.x = 1.0
+            move_cmd.linear.x = 0.26
             move_cmd.angular.z = 0.0
-            step = 0.1
-            while True:
-                # Basically if we start rotating too far, then make
-                # it start rotating back the other way.
-                if move_cmd.angular.z >= 1.5 or move_cmd.angular.z <= -1.5:
-                    step *= -1
-                if move_cmd.angular.z <= -1.5:
-                    # One snake each way is enough.
-                    break
-                move_cmd.angular.z += step
-                init_t = time.time()
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
                 new_t = time.time()
-                while (new_t - init_t < 5):
-                    self.publisher.publish(move_cmd)
-                    new_t = time.time()
+
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = 1.8
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 0.3):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.26
+            move_cmd.angular.z = 0.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = -1.8
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 0.3):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+            
+                
+            move_cmd.linear.x = 0.26
+            move_cmd.angular.z = 0.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = 1.8
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 0.3):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.26
+            move_cmd.angular.z = 0.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+            
+            move_cmd.linear.x = 0.0
+            move_cmd._angular.z = 0.0    
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+                
         elif gesture == 2:
-            # Start snaking other way
-            move_cmd.linear.x = 1.0
+            move_cmd.linear.x = 0.26
             move_cmd.angular.z = 0.0
-            step = -0.1
-            while True:
-                # Basically if we start rotating too far, then make
-                # it start rotating back the other way.
-                if move_cmd.angular.z >= 1.5 or move_cmd.angular.z <= -1.5:
-                    step *= -1
-                if move_cmd.angular.z <= -1.5:
-                    # One snake each way is enough.
-                    break
-                move_cmd.angular.z += step
-                init_t = time.time()
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
                 new_t = time.time()
-                while (new_t - init_t < 5):
-                    self.publisher.publish(move_cmd)
-                    new_t = time.time()
+
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = -1.8
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 0.3):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.26
+            move_cmd.angular.z = 0.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = 1.8
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 0.3):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+            
+                
+            move_cmd.linear.x = 0.26
+            move_cmd.angular.z = 0.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.0
+            move_cmd.angular.z = -1.8
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 0.3):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+
+            move_cmd.linear.x = 0.26
+            move_cmd.angular.z = 0.0
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
+            
+            move_cmd.linear.x = 0.0
+            move_cmd._angular.z = 0.0    
+            init_t = time.time()
+            new_t = time.time()
+            while (new_t - init_t < 1):
+                self.publisher.publish(move_cmd)
+                new_t = time.time()
         elif gesture == 3:
             # Donuts!!!
             move_cmd.linear.x = 0.0

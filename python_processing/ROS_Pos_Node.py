@@ -9,10 +9,11 @@ from Kalmin import Kalman
 
 
 class TurtlePos(Node):
-    def __init__(self, pos_mqtt, mqtt_pos):
+    def __init__(self, pos_mqtt, mqtt_pos, pos_move):
         super().__init__('position_node')
         self.pos_mqtt = pos_mqtt
         self.mqtt_pos = mqtt_pos
+        self.pos_move = pos_move
         self.odom_x = 0
         self.odom_y = 0
         self.filtered_position = 0

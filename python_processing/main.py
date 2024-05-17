@@ -20,6 +20,8 @@ if __name__ == '__main__':
     mqtt_pos = queue.Queue()
     pos_mqtt = queue.Queue()
 
+    pos_move = queue.Queue()
+
 
 
     rclpy.init()
@@ -27,8 +29,8 @@ if __name__ == '__main__':
     
 
     mqttobject = mqtt.MQTT(mqtt_move, move_mqtt, mqtt_pos, pos_mqtt)
-    move_turtle = rmn.MoveTurtle(move_mqtt, mqtt_move)
-    turtle_position = mb.FrameListener(pos_mqtt)
+    move_turtle = rmn.MoveTurtle(move_mqtt, mqtt_move, pos_move)
+    turtle_position = mb.FrameListener(pos_mqtt, pos_move)
 
 
     t1 = threading.Thread(target=mqttobject.run)

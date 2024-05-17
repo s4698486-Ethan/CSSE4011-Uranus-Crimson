@@ -38,8 +38,8 @@ class MQTT():
             # if time2 - time1 >= 1:
                 x = data[1]
                 y = data[2]
-                print(y)
-                print('\n\n\n\n')
+                #print(y)
+                #print('\n\n\n\n')
                 # x += step
                 # y += step
                 position_data = {

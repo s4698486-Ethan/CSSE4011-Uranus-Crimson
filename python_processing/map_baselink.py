@@ -30,11 +30,12 @@ class FrameListener(Node):
   The class listens to coordinate transformations and 
   publishes the 2D pose at a specific time interval.
   """
-  def __init__(self, pos_mqtt):
+  def __init__(self, pos_mqtt, pos_move):
     """
     Class constructor to set up the node
     """
     self.pos_mqtt = pos_mqtt
+    self.pos_move = pos_move
     
     # Initiate the Node class's constructor and give it a name
     super().__init__('map_base_link_frame_listener')
@@ -87,7 +88,7 @@ class FrameListener(Node):
     except TransformException as ex:
       self.get_logger().info(
         f'Could not transform {to_frame_rel} to {from_frame_rel}: {ex}')
-      time.sleep(0.5)
+      time.sleep(0.01)
       return
        
     # Publish the 2D pose
@@ -101,8 +102,13 @@ class FrameListener(Node):
     self.current_yaw = yaw    
     msg = Float64MultiArray()
     msg.data = [self.current_x, self.current_y, self.current_yaw]   
-    print (msg.data)
+    #print (msg.data)
     self.pos_mqtt.put([packet.MODE_POSITION, -self.current_y, self.current_x])
+    if (self.current_x <= -0.2 or self.current_x >= 2.2 or -self.current_y <= -0.2 or -self.current_y >= 2.2):
+      if (self.pos_move.empty()):
+        self.pos_move.put([packet.TURN_AROUND])
+      # print("TURNN")
+      # print (msg.data)
     #self.publisher_2d_pose.publish(msg) 
    
   def euler_from_quaternion(self, x, y, z, w):
